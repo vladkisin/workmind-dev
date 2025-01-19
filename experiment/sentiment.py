@@ -5,6 +5,7 @@ import mlflow
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
+from experiment.utils import calculate_user_level_metrics
 
 
 class SentimentExperiment:
@@ -43,7 +44,7 @@ class SentimentExperiment:
         mlflow.log_metric("total_time_seconds", elapsed)
         mlflow.end_run()
 
-    def evaluate(self, texts):
+    def evaluate(self, texts, user_ids=None):
         """
         Run predictions and log results to MLflow.
         - Optionally log predictions (as a text artifact) if log_predictions=True
@@ -62,6 +63,9 @@ class SentimentExperiment:
         if hasattr(self.analyzer, "class_labels"):
             mlflow.log_param("class_labels", json.dumps(self.analyzer.class_labels))
 
+        if hasattr(self.analyzer, "hypothesis_template"):
+            mlflow.log_param("hypothesis_template", json.dumps(self.analyzer.class_labels))
+
         # Optionally log predictions as a text artifact.
         if self.log_predictions:
             run_id = mlflow.active_run().info.run_id
@@ -76,9 +80,9 @@ class SentimentExperiment:
         # If we have true labels, compute and log additional metrics
         if self.true_labels:
             predicted_labels = [p["predicted_sentiment"] for p in predictions]
-            self.log_metrics(self.true_labels, predicted_labels)
+            self.log_metrics(self.true_labels, predicted_labels, user_ids)
 
-    def log_metrics(self, true_labels, predicted_labels):
+    def log_metrics(self, true_labels, predicted_labels, user_ids=None):
         """
         Compute and log classification metrics:
           - classification report (as text)
@@ -118,6 +122,16 @@ class SentimentExperiment:
             mlflow.log_metric("precision_negative", neg_scores["precision"])
             mlflow.log_metric("recall_negative", neg_scores["recall"])
             mlflow.log_metric("f1_negative", neg_scores["f1-score"])
+
+        if user_ids:
+            user_level_metrics = calculate_user_level_metrics(user_ids, predicted_labels, true_labels)
+            mlflow.log_metric("precision_user_macro", user_level_metrics["macro avg"]["precision"])
+            mlflow.log_metric("recall_user_macro", user_level_metrics["macro avg"]["recall"])
+            mlflow.log_metric("f1_user_macro", user_level_metrics["macro avg"]["f1-score"])
+            neg_user_scores = user_level_metrics.get("negative")
+            mlflow.log_metric("precision_user_negative", neg_user_scores["precision"])
+            mlflow.log_metric("recall_user_negative", neg_user_scores["recall"])
+            mlflow.log_metric("f1_user_negative", neg_user_scores["f1-score"])
 
         # 4) Confusion matrix with label axis
         # Create a list of labels from the report_dict keys (excluding avg keys)
