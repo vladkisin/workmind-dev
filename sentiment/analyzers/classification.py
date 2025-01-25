@@ -1,6 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sentiment.analyzers.base import SentimentAnalyzerBase
+from sentiment.constants import BaseSentiment
 
 
 class ClassificationSentimentAnalyzer(SentimentAnalyzerBase):
@@ -14,7 +15,8 @@ class ClassificationSentimentAnalyzer(SentimentAnalyzerBase):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name).to(self.device)
         if self.class_labels is None:
-            self.class_labels = ["negative", "positive"]
+            self.class_labels = [BaseSentiment.NEGATIVE,
+                                 BaseSentiment.POSITIVE]
 
     def infer_batch(self, batch):
         """Perform standard classification inference, returning predicted sentiment + probabilities."""

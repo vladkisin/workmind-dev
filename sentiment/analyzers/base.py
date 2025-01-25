@@ -1,6 +1,8 @@
 import torch
 from abc import ABC, abstractmethod
 
+from sentiment.constants import BaseSentiment
+
 
 class SentimentAnalyzerBase(ABC):
     """
@@ -49,6 +51,10 @@ class SentimentAnalyzerBase(ABC):
             all_predictions.extend(batch_predictions)
 
         return all_predictions
+
+    def is_negative(self, text):
+        pred = self.predict([text])[0]
+        return pred["predicted_sentiment"] == BaseSentiment.NEGATIVE
 
     @abstractmethod
     def infer_batch(self, batch):

@@ -1,6 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sentiment.analyzers.base import SentimentAnalyzerBase
+from sentiment.constants import BaseSentiment
 
 
 class NLISentimentAnalyzer(SentimentAnalyzerBase):
@@ -16,7 +17,9 @@ class NLISentimentAnalyzer(SentimentAnalyzerBase):
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name).to(self.device)
 
         if self.class_labels is None:
-            self.class_labels = ["negative", "neutral", "positive"]
+            self.class_labels = [BaseSentiment.NEGATIVE,
+                                 BaseSentiment.NEUTRAL,
+                                 BaseSentiment.POSITIVE]
         self.entailment_index = self._get_entailment_index()
 
     def _get_entailment_index(self):
