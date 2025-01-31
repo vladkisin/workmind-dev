@@ -26,7 +26,8 @@ class AdapterFineTuner(AbstractFineTuner):
             learning_rate: float = 5e-5,
             num_train_epochs: int = 2,
             train_batch_size: int = 8,
-            eval_batch_size: int = 32
+            eval_batch_size: int = 32,
+            eval_steps: int = 10
     ):
         self.model_name_or_path = model_name_or_path
         self.train_dataset = train_dataset
@@ -40,6 +41,7 @@ class AdapterFineTuner(AbstractFineTuner):
         self.num_train_epochs = num_train_epochs
         self.train_batch_size = train_batch_size
         self.eval_batch_size = eval_batch_size
+        self.eval_steps = eval_steps
 
         self.model = None
         self.trainer = None
@@ -64,7 +66,7 @@ class AdapterFineTuner(AbstractFineTuner):
             learning_rate=self.learning_rate,
             num_train_epochs=self.num_train_epochs,
             logging_dir="./logs",
-            logging_steps=10,
+            logging_steps=self.eval_steps,
             logging_first_step=True,
             per_device_train_batch_size=self.train_batch_size,
             per_device_eval_batch_size=self.eval_batch_size,
