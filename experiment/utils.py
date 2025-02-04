@@ -1,5 +1,12 @@
 import pandas as pd
 from sklearn.metrics import classification_report
+from bert_score import score
+from nltk.translate.bleu_score import sentence_bleu
+from evaluate import load
+import readability
+import re
+import torch
+from sentence_transformers import SentenceTransformer, util
 
 
 def calculate_user_level_metrics(user_ids, predicted_sentiments, real_sentiments):
@@ -30,3 +37,50 @@ def calculate_user_level_metrics(user_ids, predicted_sentiments, real_sentiments
     # Calculate classification metrics
     report = classification_report(user_level['real'], user_level['predicted'], output_dict=True)
     return report
+
+
+def clean_text(text):
+    cleaned = re.sub(r'\s+', ' ', text)
+    return cleaned.strip()
+
+
+def compute_bertscore(candidate_outputs, reference_outputs, model_type="roberta-base", batch_size=4):
+    _, _, f1 = score(candidate_outputs, reference_outputs, lang="en", model_type=model_type, batch_size=batch_size)
+    return list(f1.numpy())
+
+
+def compute_cosine_similarity(candidate_outputs, reference_outputs, embedding_model, batch_size=4):
+    candidate_embeddings = embedding_model.encode(candidate_outputs, convert_to_tensor=True, batch_size=batch_size)
+    reference_embeddings = embedding_model.encode(reference_outputs, convert_to_tensor=True, batch_size=batch_size)
+    similarities = [util.pytorch_cos_sim(c, r).item() for c, r in zip(candidate_embeddings, reference_embeddings)]
+    return similarities
+
+
+def compute_bleu(candidate_outputs, reference_outputs):
+    return [sentence_bleu([ref.split()], cand.split()) for cand, ref in zip(candidate_outputs, reference_outputs)]
+
+
+def compute_rouge(candidate_outputs, reference_outputs):
+    rouge = load("rouge")
+    results = rouge.compute(predictions=candidate_outputs, references=reference_outputs)
+    return results["rougeL"]
+
+
+def compute_perplexity(texts, tokenizer, lm_model):
+    ppl_scores = []
+    for text in texts:
+        encodings = tokenizer(text, return_tensors="pt")
+        with torch.no_grad():
+            outputs = lm_model(**encodings, labels=encodings["input_ids"])
+            loss = outputs.loss
+        ppl_scores.append(torch.exp(loss).item())
+    return ppl_scores
+
+
+def compute_readability(texts):
+    scores = []
+    for text in texts:
+        measures = readability.getmeasures(text, lang="en")
+        score_value = measures["readability grades"]["FleschReadingEase"]
+        scores.append(score_value)
+    return scores

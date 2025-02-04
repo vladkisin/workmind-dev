@@ -110,13 +110,13 @@ class InterventionGenerator:
             del generated_ids
             torch.cuda.empty_cache()
 
-    def batch_process(self, batch_of_emails):
+    def predict(self, emails):
         """
         Processes emails in batches based on the specified batch size.
         """
         results = []
-        for i in range(0, len(batch_of_emails), self.batch_size):
-            batch = batch_of_emails[i:i + self.batch_size]
+        for i in range(0, len(emails), self.batch_size):
+            batch = emails[i:i + self.batch_size]
             self.logger.info(f"Processing batch {i // self.batch_size + 1}...")
             try:
                 batch_results = self.analyze_emails(batch)
