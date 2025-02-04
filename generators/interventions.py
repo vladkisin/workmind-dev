@@ -12,7 +12,9 @@ class InterventionGenerator:
                  max_output_tokens=512,
                  batch_size=1,
                  load_in_8bit=False,
-                 load_in_4bit=False):
+                 load_in_4bit=False,
+                 system_prompt=DEFAULT_SYSTEM_PROMPT,
+                 user_prompt=DEFAULT_USER_PROMPT):
         """
         Initializes the InterventionGenerator with model, tokenizer, and batching settings.
         """
@@ -32,24 +34,26 @@ class InterventionGenerator:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.system_context = DEFAULT_SYSTEM_PROMPT
-        self.user_context_template = DEFAULT_USER_PROMPT
+        self.system_context = system_prompt
+        self.user_context_template = user_prompt
 
-    def construct_prompt(self, email):
+    def construct_prompt(self, emails):
         """
         Constructs a formatted prompt for the model.
         """
         return [
             {"role": "system", "content": self.system_context},
-            {"role": "user", "content": self.user_context_template.format(email)},
+            {"role": "user", "content": self.user_context_template.format(
+                "\n".join(f"{i + 1}. {text}" for i, text in enumerate(emails))
+            )},
         ]
 
-    def preprocess_emails(self, emails):
+    def preprocess_emails(self, batch_of_emails):
         """
         Prepares and tokenizes a batch of emails for the model.
         """
         messages = [
-            self.construct_prompt(email) for email in emails
+            self.construct_prompt(emails) for emails in batch_of_emails
         ]
         texts = [
             self.tokenizer.apply_chat_template(
@@ -69,14 +73,14 @@ class InterventionGenerator:
         ).to(self.model.device)
         return tokenized_inputs
 
-    def analyze_emails(self, emails):
+    def analyze_emails(self, batch_of_emails):
         """
         Analyzes a batch of emails for dissatisfaction and generates structured interventions.
         """
-        self.logger.info(f"Processing batch of {len(emails)} emails...")
+        self.logger.info(f"Processing batch of {len(batch_of_emails)} emails...")
 
         try:
-            tokenized_inputs = self.preprocess_emails(emails)
+            tokenized_inputs = self.preprocess_emails(batch_of_emails)
 
             with torch.no_grad():
                 generated_ids = self.model.generate(
@@ -106,13 +110,13 @@ class InterventionGenerator:
             del generated_ids
             torch.cuda.empty_cache()
 
-    def batch_process(self, emails):
+    def batch_process(self, batch_of_emails):
         """
         Processes emails in batches based on the specified batch size.
         """
         results = []
-        for i in range(0, len(emails), self.batch_size):
-            batch = emails[i:i + self.batch_size]
+        for i in range(0, len(batch_of_emails), self.batch_size):
+            batch = batch_of_emails[i:i + self.batch_size]
             self.logger.info(f"Processing batch {i // self.batch_size + 1}...")
             try:
                 batch_results = self.analyze_emails(batch)
