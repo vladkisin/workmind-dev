@@ -1,7 +1,7 @@
 import time
 import wandb
 import pandas as pd
-
+from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
 
@@ -102,5 +102,9 @@ class InterventionExperiment:
         })
         wandb.log({"evaluation_table": wandb.Table(dataframe=df)})
 
-    def evaluate(self, input_texts):
-        pass
+    def evaluate(self, input_texts, anchor_outputs):
+        predictions = []
+        for texts in tqdm(input_texts):
+            result = self.intervention_generator.analyze_emails([texts])
+            predictions.append(result)
+        self.log_metrics(predictions, anchor_outputs)
