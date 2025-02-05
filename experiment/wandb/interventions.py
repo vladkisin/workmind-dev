@@ -107,4 +107,4 @@ class InterventionExperiment:
         for texts in tqdm(input_texts):
             result = self.intervention_generator.analyze_emails([texts])[0]
             predictions.append(result)
-        self.log_metrics(predictions, anchor_outputs)
+        self.log_metrics(anchor_outputs, predictions)
