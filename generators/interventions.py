@@ -2,7 +2,12 @@ import logging
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from generators.prompts import DEFAULT_SYSTEM_PROMPT, DEFAULT_USER_PROMPT
+from generators.prompts import (
+    DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_USER_PROMPT,
+    get_entity_user_prompt,
+    get_entity_system_prompt
+)
 
 
 class InterventionGenerator:
@@ -13,6 +18,7 @@ class InterventionGenerator:
                  batch_size=1,
                  load_in_8bit=False,
                  load_in_4bit=False,
+                 entity='email(s)',
                  system_prompt=DEFAULT_SYSTEM_PROMPT,
                  user_prompt=DEFAULT_USER_PROMPT):
         """
@@ -34,8 +40,8 @@ class InterventionGenerator:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.system_context = system_prompt
-        self.user_context_template = user_prompt
+        self.system_context = get_entity_system_prompt(system_prompt, entity)
+        self.user_context_template = get_entity_user_prompt(user_prompt, entity)
 
     def construct_prompt(self, emails):
         """
@@ -123,4 +129,88 @@ class InterventionGenerator:
                 results.extend(batch_results)
             except Exception as e:
                 self.logger.warning(f"Skipping batch {i // self.batch_size + 1} due to error: {e}")
+        return results
+
+
+class RAGInterventionGenerator:
+    """
+    A Retrieval-Augmented Generator for interventions based on dissatisfaction detection.
+    Uses llama-index for retrieving context from a given index and an LLM to generate responses.
+    """
+
+    def __init__(
+        self,
+        llm,
+        index,
+        text_qa_template,
+        refine_template,
+        batch_size=1,
+    ):
+        """
+        Initializes the RAGInterventionGenerator with:
+        - An LLM (HuggingFaceLLM from llama-index or compatible).
+        - A llama-index instance (VectorStoreIndex or similar).
+        - System and user prompts.
+        - Llama-index ChatPromptTemplate instances for initial query and refinement.
+        - Batch size for processing emails.
+        """
+        self.llm = llm
+        self.index = index
+        self.text_qa_template = text_qa_template
+        self.refine_template = refine_template
+        self.batch_size = batch_size
+
+        self.query_engine = self.index.as_query_engine(
+            llm=self.llm,
+            text_qa_template=self.text_qa_template,
+            refine_template=self.refine_template,
+        )
+
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    @staticmethod
+    def construct_prompt(emails):
+        """
+        Constructs a formatted query from the given emails to be passed to the llama-index query engine.
+        This is analogous to building a prompt in a standard LLM scenario.
+        """
+        email_list_str = "\n".join(f"{i+1}. {text}" for i, text in enumerate(emails))
+        return email_list_str
+
+    def preprocess_emails(self, batch_of_emails):
+        return [self.construct_prompt(emails) for emails in batch_of_emails]
+
+    def analyze_emails(self, batch_of_emails):
+        self.logger.info(f"Processing batch of {len(batch_of_emails)} emails...")
+
+        try:
+            prompts = self.preprocess_emails(batch_of_emails)
+            responses = []
+
+            for prompt_text in prompts:
+                query_result = self.query_engine.query(prompt_text)
+                response_text = query_result.response
+                responses.append(response_text)
+            return responses
+
+        except Exception as e:
+            self.logger.error(f"Error during batch analysis: {e}", exc_info=True)
+            raise e
+
+        finally:
+            torch.cuda.empty_cache()
+
+    def predict(self, emails):
+        results = []
+        for i in range(0, len(emails), self.batch_size):
+            batch = emails[i : i + self.batch_size]
+            self.logger.info(f"Processing batch {i // self.batch_size + 1}...")
+            try:
+                batch_results = self.analyze_emails(batch)
+                results.extend(batch_results)
+            except Exception as e:
+                self.logger.warning(
+                    f"Skipping batch {i // self.batch_size + 1} due to error: {e}"
+                )
         return results
