@@ -1,7 +1,20 @@
 from typing import Dict
-
+import torch
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
+from adapters import AdapterTrainer
+
+
+class WeightedLossTrainer(AdapterTrainer):
+    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
+        labels = inputs.get("labels")
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        class_weights = torch.tensor([0.5, 0.3, 0.2]).to(logits.device)
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
+
+        loss = loss_fn(logits, labels)
+        return (loss, outputs) if return_outputs else loss
 
 
 def default_compute_metrics(eval_prediction) -> Dict[str, float]:
