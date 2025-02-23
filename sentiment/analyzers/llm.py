@@ -51,7 +51,6 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
         self.system_context = system_context
         self.user_context_template = user_context_template
 
-        # Load model and tokenizer
         self._load_model_and_tokenizer()
 
     def _load_model_and_tokenizer(self):
@@ -65,7 +64,6 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
 
         bnb_config = None
         if self.bits == 4:
-            # 4-bit via bitsandbytes
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_use_double_quant=False,
@@ -79,7 +77,6 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 torch_dtype=torch.float16
             )
         elif self.bits == 8:
-            # 8-bit via bitsandbytes
             bnb_config = BitsAndBytesConfig(
                 load_in_8bit=True,
             )
@@ -90,29 +87,22 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 torch_dtype=torch.float16
             )
         elif self.bits == 16:
-            # FP16
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
                 torch_dtype=torch.float16,
                 device_map="auto",
             )
-        else:  # self.bits == 32
-            # FP32
-            # You can still set device_map="auto" if your system has enough memory,
-            # or you can do a direct `to(self.device)` if needed.
+        else:
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                device_map="auto",  # optional
+                device_map="auto",
             )
             self.model.to(self.device)
 
-        # Some models (like Qwen) require disabling cache:
         if hasattr(self.model.config, "use_cache"):
             self.model.config.use_cache = False
 
-        # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        # Ensure we have a pad token:
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
@@ -135,14 +125,12 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
         ]
 
         try:
-            # Step 1: Use the tokenizer's apply_chat_template (Qwen-like approach)
             prompt_text = self.tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=True
             )
 
-            # Step 2: Tokenize with truncation
             tokenized_input = self.tokenizer(
                 prompt_text,
                 return_tensors="pt",
@@ -150,7 +138,6 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 max_length=self.max_input_tokens
             ).to(self.device)
 
-            # Step 3: Generate response
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **tokenized_input,
@@ -158,14 +145,11 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                     use_cache=True
                 )
 
-            # Step 4: Remove the prompt tokens from the output to isolate the model's answer
             prompt_len = tokenized_input.input_ids.shape[1]
             generated_only = generated_ids[:, prompt_len:]
 
-            # Decode
             response_text = self.tokenizer.decode(generated_only[0], skip_special_tokens=True)
         finally:
-            # Manually clear GPU cache
             del tokenized_input
             del generated_ids
             empty_cache()
@@ -180,8 +164,6 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
         predictions = []
         for text in batch:
             raw_output = self._run_inference(text)
-            # The system/user prompts are designed to produce a single word in lowercase.
-            # We'll normalize just in case:
             predicted_sentiment = raw_output.lower().strip()
 
             predictions.append({
