@@ -1,6 +1,7 @@
 from typing import Dict
 from trl import SFTTrainer
 from transformers import (
+    AutoConfig,
     AutoModelForSequenceClassification,
     TrainingArguments,
 )
@@ -21,6 +22,9 @@ class PartiallyUnfrozenClsFineTuner(AbstractFineTuner):
             output_dir: str = "./results",
             learning_rate: float = 1e-5,
             num_train_epochs: int = 15,
+            num_labels=3,
+            train_batch_size=16,
+            val_batch_size=16,
     ):
         self.model_name_or_path = model_name_or_path
         self.train_dataset = train_dataset
@@ -31,16 +35,17 @@ class PartiallyUnfrozenClsFineTuner(AbstractFineTuner):
         self.output_dir = output_dir
         self.learning_rate = learning_rate
         self.num_train_epochs = num_train_epochs
+        self.num_labels = num_labels
+        self.train_batch_size = train_batch_size
+        self.val_batch_size = val_batch_size
 
         self.model = None
         self.trainer = None
 
     def prepare_model(self) -> None:
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_name_or_path
-        )
+        config = AutoConfig.from_pretrained(self.model_name_or_path, num_labels=self.num_labels)
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name_or_path, config=config)
 
-        # Freeze all except specified layers
         for name, param in self.model.named_parameters():
             if any(layer_id in name for layer_id in self.layers_to_unfreeze):
                 param.requires_grad = True
@@ -53,15 +58,15 @@ class PartiallyUnfrozenClsFineTuner(AbstractFineTuner):
             evaluation_strategy="steps",
             save_strategy="steps",
             learning_rate=self.learning_rate,
-            per_device_train_batch_size=16,
-            per_device_eval_batch_size=16,
+            per_device_train_batch_size=self.train_batch_size,
+            per_device_eval_batch_size=self.val_batch_size,
             num_train_epochs=self.num_train_epochs,
-            weight_decay=0.01,
+            report_to="none",
             logging_dir="./logs",
             logging_steps=10,
-            load_best_model_at_end=True,
+            load_best_model_at_end=False,
             metric_for_best_model="accuracy",
-            save_total_limit=1,
+            save_total_limit=0,
         )
 
         self.trainer = trainer_class(
