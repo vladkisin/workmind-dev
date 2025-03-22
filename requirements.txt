@@ -1,5 +1,15 @@
-transformers 
-datasets 
+torch
+scikit-learn
+pandas
+numpy
+matplotlib
+seaborn
+wandb
+tqdm
+nltk
+transformers
+datasets
+sentence_transformers
 accelerate 
 peft 
 bitsandbytes 

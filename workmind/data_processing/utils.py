@@ -42,7 +42,6 @@ def chunk_text_by_sentences(
     chunks = []
     current_chunk = []
     current_length = 0
-
     i = 0
     while i < len(sentences):
         sentence = sentences[i]
@@ -57,15 +56,15 @@ def chunk_text_by_sentences(
             i += 1
             continue
 
-        if current_length + sentence_length + (1 if current_chunk else 0) > max_chunk:
+        additional_space = 1 if current_chunk else 0
+        if current_length + additional_space + sentence_length > max_chunk:
             if current_length < min_chunk:
                 current_chunk.append(sentence)
-                current_length += sentence_length + (1 if current_chunk[:-1] else 0)
+                current_length += additional_space + sentence_length
                 i += 1
                 continue
             else:
-                chunk_text = " ".join(current_chunk)
-                chunks.append(chunk_text)
+                chunks.append(" ".join(current_chunk))
                 overlap_chunk = []
                 overlap_length = 0
                 j = len(current_chunk) - 1
@@ -74,10 +73,13 @@ def chunk_text_by_sentences(
                     overlap_length += len(current_chunk[j]) + 1
                     j -= 1
 
-                current_chunk = overlap_chunk.copy()
-                current_length = sum(len(s) for s in current_chunk) + (
-                    len(current_chunk) - 1
-                )
+                new_overlap_length = sum(len(s) for s in overlap_chunk) + (len(overlap_chunk) - 1 if overlap_chunk else 0)
+                if not overlap_chunk or new_overlap_length >= current_length:
+                    current_chunk = []
+                    current_length = 0
+                else:
+                    current_chunk = overlap_chunk.copy()
+                    current_length = new_overlap_length
                 continue
         else:
             if current_chunk:
@@ -87,5 +89,4 @@ def chunk_text_by_sentences(
             i += 1
     if current_chunk:
         chunks.append(" ".join(current_chunk))
-
     return chunks

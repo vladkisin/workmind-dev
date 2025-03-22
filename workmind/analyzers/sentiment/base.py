@@ -46,7 +46,7 @@ class SentimentAnalyzerBase(ABC):
         """
         all_predictions = []
         num_batches = (len(texts) + self.batch_size - 1) // self.batch_size
-        logging_step_den = num_batches // 10
+        logging_step_den = max(num_batches // 10, 1)
         for batch_num, batch in enumerate(self.batchify(texts), start=1):
             if batch_num % logging_step_den == 0:
                 print(f"Processing batch {batch_num}/{num_batches}...")

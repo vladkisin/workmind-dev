@@ -119,7 +119,8 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
             {"role": "system", "content": self.system_context},
             {"role": "user", "content": self.user_context_template.format(text)},
         ]
-
+        tokenized_input = None
+        generated_ids = None
         try:
             prompt_text = self.tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
@@ -144,8 +145,10 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 generated_only[0], skip_special_tokens=True
             )
         finally:
-            del tokenized_input
-            del generated_ids
+            if tokenized_input is not None:
+                del tokenized_input
+            if generated_ids is not None:
+                del generated_ids
             empty_cache()
 
         return self._extract_label(response_text.strip())

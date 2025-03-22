@@ -44,7 +44,6 @@ def get_analyzer(
             model_name=model_name,
             class_labels=class_labels,
             batch_size=batch_size,
-            hypothesis_template=hypothesis_template,
         )
     else:
         raise ValueError(
