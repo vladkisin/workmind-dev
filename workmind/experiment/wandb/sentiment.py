@@ -2,175 +2,119 @@ import time
 import wandb
 import matplotlib.pyplot as plt
 import seaborn as sns
+from typing import List, Dict, Any, Optional
 from sklearn.metrics import classification_report, confusion_matrix
 from workmind.experiment.utils import calculate_user_level_metrics
 
 
 class SentimentExperiment:
     """
-    Class to log and evaluate sentiment analysis experiments using W&B.
+    W&B-based experiment wrapper for logging and evaluating sentiment analysis experiments.
     """
 
-    def __init__(
-        self,
-        analyzer,
-        experiment_name,
-        true_labels=None,
-        log_predictions=False,
-        project_name="workmind",
-    ):
+    def __init__(self, analyzer: Any, experiment_name: str, true_labels: Optional[List[str]] = None, log_predictions: bool = False, project_name: str = "workmind") -> None:
         """
-        :param analyzer: A SentimentAnalyzerBase (or similar) object with a `predict(texts)` method
-        :param project_name: Name of the W&B project
-        :param true_labels: Optional list of ground-truth labels for evaluation
-        :param log_predictions: Whether to log all predictions as a text artifact. Defaults to False.
-        """
-        self.analyzer = analyzer
-        self.project_name = project_name
-        self.experiment_name = experiment_name
-        self.true_labels = true_labels
-        self.log_predictions = log_predictions
-        self.run = None
-        self.start_time = None
-        self.end_time = None
+        Initialize the sentiment experiment.
 
-    def __enter__(self):
-        """Start the W&B run and timer."""
+        Parameters:
+            analyzer (Any): A sentiment analyzer with a predict method.
+            experiment_name (str): Name of the experiment.
+            true_labels (Optional[List[str]]): Ground-truth labels.
+            log_predictions (bool): Whether to log predictions.
+            project_name (str): W&B project name.
+        """
+        self.analyzer: Any = analyzer
+        self.project_name: str = project_name
+        self.experiment_name: str = experiment_name
+        self.true_labels: Optional[List[str]] = true_labels
+        self.log_predictions: bool = log_predictions
+        self.run: Optional[Any] = None
+        self.start_time: Optional[float] = None
+        self.end_time: Optional[float] = None
+
+    def __enter__(self) -> "SentimentExperiment":
         self.start_time = time.time()
-        self.run = wandb.init(
-            project=self.project_name, name=self.experiment_name, reinit=True
-        )
+        self.run = wandb.init(project=self.project_name, name=self.experiment_name, reinit=True)
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        """End the W&B run and log total time."""
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.end_time = time.time()
         elapsed = self.end_time - self.start_time
         wandb.log({"total_time_seconds": elapsed})
         self.run.finish()
 
-    def evaluate(self, texts, user_ids=None):
+    def evaluate(self, texts: List[str], user_ids: Optional[List[str]] = None) -> None:
         """
-        Run predictions and log results to W&B.
-        - Optionally log predictions (as a text artifact) if log_predictions=True
-        - If true_labels is provided, log classification metrics and a confusion matrix plot
-        """
-        # Generate predictions
-        predictions = self.analyzer.predict(texts)
+        Run sentiment predictions and log results to W&B.
 
-        # Log model-related parameters
-        wandb.config.update(
-            {"model_name": self.analyzer.model_name}, allow_val_change=True
-        )
+        Parameters:
+            texts (List[str]): List of input texts.
+            user_ids (Optional[List[str]]): List of user IDs for aggregation.
+        """
+        predictions = self.analyzer.predict(texts)
+        wandb.config.update({"model_name": self.analyzer.model_name}, allow_val_change=True)
         if hasattr(self.analyzer, "mode"):
             wandb.config.update({"mode": self.analyzer.mode}, allow_val_change=True)
         if hasattr(self.analyzer, "class_labels"):
-            wandb.config.update(
-                {"class_labels": self.analyzer.class_labels}, allow_val_change=True
-            )
+            wandb.config.update({"class_labels": self.analyzer.class_labels}, allow_val_change=True)
         if hasattr(self.analyzer, "hypothesis_template"):
-            wandb.config.update(
-                {"hypothesis_template": self.analyzer.hypothesis_template},
-                allow_val_change=True,
-            )
-
-        # Optionally log predictions as a text artifact
+            wandb.config.update({"hypothesis_template": self.analyzer.hypothesis_template}, allow_val_change=True)
         if self.log_predictions:
             preds_file = "predictions.txt"
             with open(preds_file, "w", encoding="utf-8") as f:
                 for p in predictions:
-                    f.write(f"Text: {p['text']}\n")
-                    f.write(f"Predicted: {p['predicted_sentiment']}\n")
-                    f.write("----\n")
+                    f.write(f"Text: {p['text']}\nPredicted: {p['predicted_sentiment']}\n----\n")
             wandb.save(preds_file)
-
-        # If we have true labels, compute and log additional metrics
         if self.true_labels:
             predicted_labels = [p["predicted_sentiment"] for p in predictions]
             self.log_metrics(self.true_labels, predicted_labels, user_ids)
+    @staticmethod
+    def log_metrics(true_labels: List[str], predicted_labels: List[str], user_ids: Optional[List[str]] = None) -> None:
+        """
+        Compute and log sentiment metrics and confusion matrix to W&B.
 
-    def log_metrics(self, true_labels, predicted_labels, user_ids=None):
+        Parameters:
+            true_labels (List[str]): True sentiment labels.
+            predicted_labels (List[str]): Predicted sentiment labels.
+            user_ids (Optional[List[str]]): User IDs for aggregation.
         """
-        Compute and log classification metrics:
-          - classification report (as text and dict)
-          - confusion matrix (as an image)
-          - macro avg precision, recall, f1
-          - accuracy
-          - additional metrics for 'negative' class
-        """
-        # 1) classification_report as dict and log metrics
-        report_dict = classification_report(
-            true_labels, predicted_labels, output_dict=True
-        )
+        report_dict = classification_report(true_labels, predicted_labels, output_dict=True)
         wandb.log({"classification_report": report_dict})
-
-        # Log macro avg metrics
-        wandb.log(
-            {
-                "precision_macro": report_dict["macro avg"]["precision"],
-                "recall_macro": report_dict["macro avg"]["recall"],
-                "f1_macro": report_dict["macro avg"]["f1-score"],
-            }
-        )
-
-        # Also log accuracy if available
+        wandb.log({
+            "precision_macro": report_dict["macro avg"]["precision"],
+            "recall_macro": report_dict["macro avg"]["recall"],
+            "f1_macro": report_dict["macro avg"]["f1-score"],
+        })
         if "accuracy" in report_dict:
             wandb.log({"accuracy": report_dict["accuracy"]})
-
-        # ---------------------------------------------
-        # 2) Metrics for the "negative" class specifically
-        # ---------------------------------------------
         neg_scores = report_dict.get("negative")
         if neg_scores:
-            wandb.log(
-                {
-                    "precision_negative": neg_scores["precision"],
-                    "recall_negative": neg_scores["recall"],
-                    "f1_negative": neg_scores["f1-score"],
-                }
-            )
-
+            wandb.log({
+                "precision_negative": neg_scores["precision"],
+                "recall_negative": neg_scores["recall"],
+                "f1_negative": neg_scores["f1-score"],
+            })
         if user_ids:
-            user_level_metrics = calculate_user_level_metrics(
-                user_ids, predicted_labels, true_labels
-            )
-            wandb.log(
-                {
-                    "precision_user_macro": user_level_metrics["macro avg"][
-                        "precision"
-                    ],
-                    "recall_user_macro": user_level_metrics["macro avg"]["recall"],
-                    "f1_user_macro": user_level_metrics["macro avg"]["f1-score"],
-                }
-            )
+            user_level_metrics = calculate_user_level_metrics(user_ids, predicted_labels, true_labels)
+            wandb.log({
+                "precision_user_macro": user_level_metrics["macro avg"]["precision"],
+                "recall_user_macro": user_level_metrics["macro avg"]["recall"],
+                "f1_user_macro": user_level_metrics["macro avg"]["f1-score"],
+            })
             neg_user_scores = user_level_metrics.get("negative")
-            wandb.log(
-                {
-                    "precision_user_negative": neg_user_scores["precision"],
-                    "recall_user_negative": neg_user_scores["recall"],
-                    "f1_user_negative": neg_user_scores["f1-score"],
-                }
-            )
-
-        # 3) Confusion matrix with label axis
+            wandb.log({
+                "precision_user_negative": neg_user_scores["precision"],
+                "recall_user_negative": neg_user_scores["recall"],
+                "f1_user_negative": neg_user_scores["f1-score"],
+            })
         exclude_keys = {"accuracy", "macro avg", "weighted avg"}
         labels = [k for k in report_dict.keys() if k not in exclude_keys]
-
         cm = confusion_matrix(true_labels, predicted_labels, labels=labels)
         fig, ax = plt.subplots(figsize=(5, 4))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            xticklabels=labels,
-            yticklabels=labels,
-            ax=ax,
-        )
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels, ax=ax)
         ax.set_xlabel("Predicted")
         ax.set_ylabel("True")
         ax.set_title("Confusion Matrix")
-
         cm_png = "confusion_matrix.png"
         fig.savefig(cm_png, bbox_inches="tight")
         wandb.log({"confusion_matrix": wandb.Image(cm_png)})

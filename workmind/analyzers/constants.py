@@ -3,13 +3,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SentimentInferenceType:
-    NLI = "nli"
-    CLASSIFICATION = "classification"
-    LLM = "llm"
+    NLI: str = "nli"
+    CLASSIFICATION: str = "classification"
+    LLM: str = "llm"
 
 
 @dataclass(frozen=True)
 class BaseSentiment:
-    NEGATIVE = "negative"
-    NEUTRAL = "neutral"
-    POSITIVE = "positive"
+    NEGATIVE: str = "negative"
+    NEUTRAL: str = "neutral"
+    POSITIVE: str = "positive"

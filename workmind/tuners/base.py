@@ -4,26 +4,26 @@ from typing import Dict
 
 class AbstractFineTuner(ABC):
     """
-    Defines the interface for different fine-tuning approaches.
+    Abstract interface for a model fine-tuner.
     """
 
     @abstractmethod
     def prepare_model(self) -> None:
         """
-        Prepare the model (load from checkpoint, add adapters/LoRA layers, freeze/unfreeze layers, etc.).
+        Prepare the model (e.g., load checkpoint, add adapters, freeze/unfreeze layers).
         """
         pass
 
     @abstractmethod
     def train(self) -> None:
         """
-        Execute the training process.
+        Train the model.
         """
         pass
 
     @abstractmethod
     def evaluate(self) -> Dict[str, float]:
         """
-        Evaluate the model on a validation/test set and return metrics.
+        Evaluate the model and return evaluation metrics.
         """
         pass
