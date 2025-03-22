@@ -2,25 +2,27 @@ import logging
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from generators.prompts import (
+from workmind.generators.prompts import (
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_USER_PROMPT,
     get_entity_user_prompt,
-    get_entity_system_prompt
+    get_entity_system_prompt,
 )
 
 
 class InterventionGenerator:
-    def __init__(self,
-                 model_name="microsoft/Phi-3.5-mini-instruct",
-                 max_input_tokens=512,
-                 max_output_tokens=512,
-                 batch_size=1,
-                 load_in_8bit=False,
-                 load_in_4bit=False,
-                 entity='email(s)',
-                 system_prompt=DEFAULT_SYSTEM_PROMPT,
-                 user_prompt=DEFAULT_USER_PROMPT):
+    def __init__(
+        self,
+        model_name="microsoft/Phi-3.5-mini-instruct",
+        max_input_tokens=512,
+        max_output_tokens=512,
+        batch_size=1,
+        load_in_8bit=False,
+        load_in_4bit=False,
+        entity="email(s)",
+        system_prompt=DEFAULT_SYSTEM_PROMPT,
+        user_prompt=DEFAULT_USER_PROMPT,
+    ):
         """
         Initializes the InterventionGenerator with model, tokenizer, and batching settings.
         """
@@ -49,23 +51,22 @@ class InterventionGenerator:
         """
         return [
             {"role": "system", "content": self.system_context},
-            {"role": "user", "content": self.user_context_template.format(
-                "\n".join(f"{i + 1}. {text}" for i, text in enumerate(emails))
-            )},
+            {
+                "role": "user",
+                "content": self.user_context_template.format(
+                    "\n".join(f"{i + 1}. {text}" for i, text in enumerate(emails))
+                ),
+            },
         ]
 
     def preprocess_emails(self, batch_of_emails):
         """
         Prepares and tokenizes a batch of emails for the model.
         """
-        messages = [
-            self.construct_prompt(emails) for emails in batch_of_emails
-        ]
+        messages = [self.construct_prompt(emails) for emails in batch_of_emails]
         texts = [
             self.tokenizer.apply_chat_template(
-                message,
-                tokenize=False,
-                add_generation_prompt=True
+                message, tokenize=False, add_generation_prompt=True
             )
             for message in messages
         ]
@@ -75,7 +76,7 @@ class InterventionGenerator:
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=self.max_input_tokens
+            max_length=self.max_input_tokens,
         ).to(self.model.device)
         return tokenized_inputs
 
@@ -92,14 +93,18 @@ class InterventionGenerator:
                 generated_ids = self.model.generate(
                     **tokenized_inputs,
                     max_new_tokens=self.max_output_tokens,
-                    use_cache=True
+                    use_cache=True,
                 )
 
             response_ids = [
-                output_ids[len(input_ids):]
-                for input_ids, output_ids in zip(tokenized_inputs.input_ids, generated_ids)
+                output_ids[len(input_ids) :]
+                for input_ids, output_ids in zip(
+                    tokenized_inputs.input_ids, generated_ids
+                )
             ]
-            responses = self.tokenizer.batch_decode(response_ids, skip_special_tokens=True)
+            responses = self.tokenizer.batch_decode(
+                response_ids, skip_special_tokens=True
+            )
 
             for i, response in enumerate(responses):
                 self.logger.info(f"Email {i + 1} response: {response.strip()}")
@@ -122,13 +127,15 @@ class InterventionGenerator:
         """
         results = []
         for i in range(0, len(emails), self.batch_size):
-            batch = emails[i:i + self.batch_size]
+            batch = emails[i : i + self.batch_size]
             self.logger.info(f"Processing batch {i // self.batch_size + 1}...")
             try:
                 batch_results = self.analyze_emails(batch)
                 results.extend(batch_results)
             except Exception as e:
-                self.logger.warning(f"Skipping batch {i // self.batch_size + 1} due to error: {e}")
+                self.logger.warning(
+                    f"Skipping batch {i // self.batch_size + 1} due to error: {e}"
+                )
         return results
 
 

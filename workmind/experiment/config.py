@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from sentiment.constants import BaseSentiment
+from workmind.analyzers.constants import BaseSentiment
 
 DEFAULT_BATCH_SIZE = 32
 SMALL_BATCH_SIZE = 16
@@ -43,41 +43,55 @@ MODELS_CONFIG = {
         ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.POSITIVE],
         ConfigKeys.BATCH_SIZE: DEFAULT_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.NONE,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.BERT_CLS_PRETRAINED
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.BERT_CLS_PRETRAINED,
     },
     "dipawidia/xlnet-base-cased-product-review-sentiment-analysis": {
         ConfigKeys.INFERENCE_TYPE: SentimentInferenceType.CLASSIFICATION,
         ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.POSITIVE],
         ConfigKeys.BATCH_SIZE: DEFAULT_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.NONE,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.XLNET_CLS_PRETRAINED
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.XLNET_CLS_PRETRAINED,
     },
     "siebert/sentiment-roberta-large-english": {
         ConfigKeys.INFERENCE_TYPE: SentimentInferenceType.CLASSIFICATION,
         ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.POSITIVE],
         ConfigKeys.BATCH_SIZE: DEFAULT_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.NONE,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.ROBERTA_LARGE_CLS_PRETRAINED
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.ROBERTA_LARGE_CLS_PRETRAINED,
     },
     "nlptown/bert-base-multilingual-uncased-sentiment": {
         ConfigKeys.INFERENCE_TYPE: SentimentInferenceType.CLASSIFICATION,
-        ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.NEGATIVE, BaseSentiment.NEUTRAL, BaseSentiment.POSITIVE, BaseSentiment.POSITIVE],
+        ConfigKeys.CLASS_LABELS: [
+            BaseSentiment.NEGATIVE,
+            BaseSentiment.NEGATIVE,
+            BaseSentiment.NEUTRAL,
+            BaseSentiment.POSITIVE,
+            BaseSentiment.POSITIVE,
+        ],
         ConfigKeys.BATCH_SIZE: DEFAULT_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.NONE,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.BERT_SENTIMENT_PRETRAINED_5_CLASSES
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.BERT_SENTIMENT_PRETRAINED_5_CLASSES,
     },
     "roberta-large-mnli": {
         ConfigKeys.INFERENCE_TYPE: SentimentInferenceType.NLI,
-        ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.NEUTRAL, BaseSentiment.POSITIVE],
+        ConfigKeys.CLASS_LABELS: [
+            BaseSentiment.NEGATIVE,
+            BaseSentiment.NEUTRAL,
+            BaseSentiment.POSITIVE,
+        ],
         ConfigKeys.BATCH_SIZE: SMALL_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.DEFAULT_NLI,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.ROBERTA_LARGE_NLI
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.ROBERTA_LARGE_NLI,
     },
     "MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli": {
         ConfigKeys.INFERENCE_TYPE: SentimentInferenceType.NLI,
-        ConfigKeys.CLASS_LABELS: [BaseSentiment.NEGATIVE, BaseSentiment.NEUTRAL, BaseSentiment.POSITIVE],
+        ConfigKeys.CLASS_LABELS: [
+            BaseSentiment.NEGATIVE,
+            BaseSentiment.NEUTRAL,
+            BaseSentiment.POSITIVE,
+        ],
         ConfigKeys.BATCH_SIZE: SMALL_BATCH_SIZE,
         ConfigKeys.HYPOTHESIS_TEMPLATE: HypothesisTemplates.DEFAULT_NLI,
-        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.DEBERTA_V3_LARGE_NLI
+        ConfigKeys.EXPERIMENT_NAME: ExperimentNames.DEBERTA_V3_LARGE_NLI,
     },
 }

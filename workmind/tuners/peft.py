@@ -5,32 +5,32 @@ from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     TrainingArguments,
-    BitsAndBytesConfig
+    BitsAndBytesConfig,
 )
 from peft import LoraConfig
 
-from tuners.base import AbstractFineTuner
+from workmind.tuners.base import AbstractFineTuner
 
 
 class LoraCausalFineTuner(AbstractFineTuner):
     def __init__(
-            self,
-            model_name_or_path: str,
-            train_dataset,
-            eval_dataset,
-            tokenizer=None,
-            lora_alpha: int = 16,
-            lora_dropout: float = 0.0,
-            r: int = 64,
-            lora_target_modules: list[str] = None,
-            bias: str = "none",
-            learning_rate: float = 2e-5,
-            num_train_epochs: int = 4,
-            output_dir: str = "./causal_lora_output",
-            compute_metrics=None,
-            use_4bit: bool = True,
-            train_batch_size: int = 8,
-            eval_batch_size: int = 32,
+        self,
+        model_name_or_path: str,
+        train_dataset,
+        eval_dataset,
+        tokenizer=None,
+        lora_alpha: int = 16,
+        lora_dropout: float = 0.0,
+        r: int = 64,
+        lora_target_modules: list[str] = None,
+        bias: str = "none",
+        learning_rate: float = 2e-5,
+        num_train_epochs: int = 4,
+        output_dir: str = "./causal_lora_output",
+        compute_metrics=None,
+        use_4bit: bool = True,
+        train_batch_size: int = 8,
+        eval_batch_size: int = 32,
     ):
         self.model_name_or_path = model_name_or_path
         self.train_dataset = train_dataset
@@ -89,7 +89,7 @@ class LoraCausalFineTuner(AbstractFineTuner):
             r=self.r,
             bias="lora_only",
             task_type="CAUSAL_LM",
-            target_modules=self.lora_target_modules
+            target_modules=self.lora_target_modules,
         )
         training_args = TrainingArguments(
             output_dir=self.output_dir,
@@ -118,7 +118,7 @@ class LoraCausalFineTuner(AbstractFineTuner):
             train_dataset=self.train_dataset,
             eval_dataset=self.eval_dataset,
             tokenizer=self.tokenizer,
-            peft_config=peft_config
+            peft_config=peft_config,
         )
         self.trainer.train()
 

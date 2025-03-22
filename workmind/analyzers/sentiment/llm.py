@@ -1,13 +1,9 @@
 import torch
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    BitsAndBytesConfig
-)
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from torch.cuda import empty_cache
 
-from sentiment.constants import BaseSentiment
-from sentiment.analyzers.base import SentimentAnalyzerBase
+from workmind.analyzers.constants import BaseSentiment
+from workmind.analyzers.sentiment.base import SentimentAnalyzerBase
 
 
 class LLMSentimentAnalyzer(SentimentAnalyzerBase):
@@ -74,7 +70,7 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 self.model_name,
                 quantization_config=bnb_config,
                 device_map="auto",
-                torch_dtype=torch.float16
+                torch_dtype=torch.float16,
             )
         elif self.bits == 8:
             bnb_config = BitsAndBytesConfig(
@@ -84,7 +80,7 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
                 self.model_name,
                 quantization_config=bnb_config,
                 device_map="auto",
-                torch_dtype=torch.float16
+                torch_dtype=torch.float16,
             )
         elif self.bits == 16:
             self.model = AutoModelForCausalLM.from_pretrained(
@@ -111,7 +107,7 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
     def _extract_label(self, text):
         for label in self.class_labels:
             if label in text.lower():
-              return label
+                return label
         return BaseSentiment.NEUTRAL
 
     def _run_inference(self, text: str) -> str:
@@ -126,29 +122,27 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
 
         try:
             prompt_text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
+                messages, tokenize=False, add_generation_prompt=True
             )
 
             tokenized_input = self.tokenizer(
                 prompt_text,
                 return_tensors="pt",
                 truncation=True,
-                max_length=self.max_input_tokens
+                max_length=self.max_input_tokens,
             ).to(self.device)
 
             with torch.no_grad():
                 generated_ids = self.model.generate(
-                    **tokenized_input,
-                    max_new_tokens=20,
-                    use_cache=True
+                    **tokenized_input, max_new_tokens=20, use_cache=True
                 )
 
             prompt_len = tokenized_input.input_ids.shape[1]
             generated_only = generated_ids[:, prompt_len:]
 
-            response_text = self.tokenizer.decode(generated_only[0], skip_special_tokens=True)
+            response_text = self.tokenizer.decode(
+                generated_only[0], skip_special_tokens=True
+            )
         finally:
             del tokenized_input
             del generated_ids
@@ -166,8 +160,7 @@ class LLMSentimentAnalyzer(SentimentAnalyzerBase):
             raw_output = self._run_inference(text)
             predicted_sentiment = raw_output.lower().strip()
 
-            predictions.append({
-                "text": text,
-                "predicted_sentiment": predicted_sentiment
-            })
+            predictions.append(
+                {"text": text, "predicted_sentiment": predicted_sentiment}
+            )
         return predictions

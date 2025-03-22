@@ -3,31 +3,30 @@ from typing import Dict, Optional
 from adapters import AutoAdapterModel, AdapterTrainer
 from transformers import (
     AutoConfig,
-    AutoModelForSequenceClassification,
     TrainingArguments,
 )
 
-from tuners.base import AbstractFineTuner
-from tuners.utils import default_compute_metrics
+from workmind.tuners.base import AbstractFineTuner
+from workmind.tuners.utils import default_compute_metrics
 
 
 class AdapterFineTuner(AbstractFineTuner):
     def __init__(
-            self,
-            model_name_or_path: str,
-            train_dataset,
-            eval_dataset,
-            tokenizer,
-            adapter_name: str = "sentiment-head",
-            num_labels: int = 2,
-            id2label: Optional[Dict[int, str]] = None,
-            compute_metrics=default_compute_metrics,
-            output_dir: str = "./training_output",
-            learning_rate: float = 5e-5,
-            num_train_epochs: int = 2,
-            train_batch_size: int = 8,
-            eval_batch_size: int = 32,
-            eval_steps: int = 10
+        self,
+        model_name_or_path: str,
+        train_dataset,
+        eval_dataset,
+        tokenizer,
+        adapter_name: str = "sentiment-head",
+        num_labels: int = 2,
+        id2label: Optional[Dict[int, str]] = None,
+        compute_metrics=default_compute_metrics,
+        output_dir: str = "./training_output",
+        learning_rate: float = 5e-5,
+        num_train_epochs: int = 2,
+        train_batch_size: int = 8,
+        eval_batch_size: int = 32,
+        eval_steps: int = 10,
     ):
         self.model_name_or_path = model_name_or_path
         self.train_dataset = train_dataset
@@ -47,18 +46,22 @@ class AdapterFineTuner(AbstractFineTuner):
         self.trainer = None
 
     def prepare_model(self) -> None:
-        config = AutoConfig.from_pretrained(self.model_name_or_path, num_labels=self.num_labels)
-        self.model = AutoAdapterModel.from_pretrained(self.model_name_or_path, config=config)
-
-        self.model.add_adapter(self.adapter_name, config="lora")  # or other adapter config if you prefer
-
-        self.model.add_classification_head(
-            self.adapter_name,
-            num_labels=self.num_labels,
-            id2label=self.id2label
+        config = AutoConfig.from_pretrained(
+            self.model_name_or_path, num_labels=self.num_labels
+        )
+        self.model = AutoAdapterModel.from_pretrained(
+            self.model_name_or_path, config=config
         )
 
-        # Activate the adapter
+        self.model.add_adapter(
+            self.adapter_name, config="lora"
+        )  # or other adapter config if you prefer
+
+        self.model.add_classification_head(
+            self.adapter_name, num_labels=self.num_labels, id2label=self.id2label
+        )
+
+        # activate the adapter
         self.model.train_adapter(self.adapter_name)
 
     def train(self, trainer_class=AdapterTrainer) -> None:

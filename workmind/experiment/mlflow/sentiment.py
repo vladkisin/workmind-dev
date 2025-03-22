@@ -5,7 +5,7 @@ import mlflow
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
-from experiment.utils import calculate_user_level_metrics
+from workmind.experiment.utils import calculate_user_level_metrics
 
 
 class SentimentExperiment:
@@ -13,7 +13,9 @@ class SentimentExperiment:
     Class to log and evaluate sentiment analysis experiments using MLflow.
     """
 
-    def __init__(self, analyzer, experiment_name, true_labels=None, log_predictions=False):
+    def __init__(
+        self, analyzer, experiment_name, true_labels=None, log_predictions=False
+    ):
         """
         :param analyzer: A SentimentAnalyzerBase (or similar) object with a `predict(texts)` method
         :param experiment_name: Name of the MLflow experiment
@@ -28,7 +30,7 @@ class SentimentExperiment:
         self.end_time = None
 
         # Ensure experiment is created or set as current
-        mlflow.set_tracking_uri(os.path.abspath(os.curdir) + '/mlruns')
+        mlflow.set_tracking_uri(os.path.abspath(os.curdir) + "/mlruns")
         mlflow.set_experiment(experiment_name)
 
     def __enter__(self):
@@ -55,7 +57,7 @@ class SentimentExperiment:
 
         # Log model-related parameters
         mlflow.log_param("model_name", self.analyzer.model_name)
-        # If "mode" is not defined in all analyzers, wrap in a hasattr check
+        # If "mode" is not defined in all sentiment, wrap in a hasattr check
         if hasattr(self.analyzer, "mode"):
             mlflow.log_param("mode", self.analyzer.mode)
 
@@ -64,7 +66,9 @@ class SentimentExperiment:
             mlflow.log_param("class_labels", json.dumps(self.analyzer.class_labels))
 
         if hasattr(self.analyzer, "hypothesis_template"):
-            mlflow.log_param("hypothesis_template", json.dumps(self.analyzer.class_labels))
+            mlflow.log_param(
+                "hypothesis_template", json.dumps(self.analyzer.class_labels)
+            )
 
         # Optionally log predictions as a text artifact.
         if self.log_predictions:
@@ -101,7 +105,9 @@ class SentimentExperiment:
         mlflow.log_artifact(report_file)
 
         # 2) classification_report as a dict (for logging metrics)
-        report_dict = classification_report(true_labels, predicted_labels, output_dict=True)
+        report_dict = classification_report(
+            true_labels, predicted_labels, output_dict=True
+        )
 
         # Log macro avg metrics
         mlflow.log_metric("precision_macro", report_dict["macro avg"]["precision"])
@@ -124,10 +130,18 @@ class SentimentExperiment:
             mlflow.log_metric("f1_negative", neg_scores["f1-score"])
 
         if user_ids:
-            user_level_metrics = calculate_user_level_metrics(user_ids, predicted_labels, true_labels)
-            mlflow.log_metric("precision_user_macro", user_level_metrics["macro avg"]["precision"])
-            mlflow.log_metric("recall_user_macro", user_level_metrics["macro avg"]["recall"])
-            mlflow.log_metric("f1_user_macro", user_level_metrics["macro avg"]["f1-score"])
+            user_level_metrics = calculate_user_level_metrics(
+                user_ids, predicted_labels, true_labels
+            )
+            mlflow.log_metric(
+                "precision_user_macro", user_level_metrics["macro avg"]["precision"]
+            )
+            mlflow.log_metric(
+                "recall_user_macro", user_level_metrics["macro avg"]["recall"]
+            )
+            mlflow.log_metric(
+                "f1_user_macro", user_level_metrics["macro avg"]["f1-score"]
+            )
             neg_user_scores = user_level_metrics.get("negative")
             mlflow.log_metric("precision_user_negative", neg_user_scores["precision"])
             mlflow.log_metric("recall_user_negative", neg_user_scores["recall"])
@@ -143,14 +157,21 @@ class SentimentExperiment:
         cm = confusion_matrix(true_labels, predicted_labels, labels=labels)
 
         fig, ax = plt.subplots(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                    xticklabels=labels, yticklabels=labels, ax=ax)
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=labels,
+            yticklabels=labels,
+            ax=ax,
+        )
 
         ax.set_xlabel("Predicted")
         ax.set_ylabel("True")
         ax.set_title("Confusion Matrix")
 
         cm_png = f"confusion_matrix_{run_id}.png"
-        fig.savefig(cm_png, bbox_inches='tight')
+        fig.savefig(cm_png, bbox_inches="tight")
         mlflow.log_artifact(cm_png)
         plt.close(fig)

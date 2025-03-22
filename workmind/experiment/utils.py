@@ -21,43 +21,74 @@ def calculate_user_level_metrics(user_ids, predicted_sentiments, real_sentiments
     Returns:
         dict: Classification report for user-level predictions.
     """
-    # Create a DataFrame for easy manipulation
-    data = pd.DataFrame({
-        'user_id': user_ids,
-        'predicted': predicted_sentiments,
-        'real': real_sentiments
-    })
+    data = pd.DataFrame(
+        {
+            "user_id": user_ids,
+            "predicted": predicted_sentiments,
+            "real": real_sentiments,
+        }
+    )
 
     # Aggregate sentiments by user
-    user_level = data.groupby('user_id').agg({
-        'predicted': lambda x: 'negative' if 'negative' in x.values else 'positive',
-        'real': lambda x: 'negative' if 'negative' in x.values else 'positive'
-    }).reset_index()
+    user_level = (
+        data.groupby("user_id")
+        .agg(
+            {
+                "predicted": lambda x: (
+                    "negative" if "negative" in x.values else "positive"
+                ),
+                "real": lambda x: "negative" if "negative" in x.values else "positive",
+            }
+        )
+        .reset_index()
+    )
 
     # Calculate classification metrics
-    report = classification_report(user_level['real'], user_level['predicted'], output_dict=True)
+    report = classification_report(
+        user_level["real"], user_level["predicted"], output_dict=True
+    )
     return report
 
 
 def clean_text(text):
-    cleaned = re.sub(r'\s+', ' ', text)
+    cleaned = re.sub(r"\s+", " ", text)
     return cleaned.strip()
 
 
-def compute_bertscore(candidate_outputs, reference_outputs, model_type="roberta-base", batch_size=4):
-    _, _, f1 = score(candidate_outputs, reference_outputs, lang="en", model_type=model_type, batch_size=batch_size)
+def compute_bertscore(
+    candidate_outputs, reference_outputs, model_type="roberta-base", batch_size=4
+):
+    _, _, f1 = score(
+        candidate_outputs,
+        reference_outputs,
+        lang="en",
+        model_type=model_type,
+        batch_size=batch_size,
+    )
     return list(f1.numpy())
 
 
-def compute_cosine_similarity(candidate_outputs, reference_outputs, embedding_model, batch_size=4):
-    candidate_embeddings = embedding_model.encode(candidate_outputs, convert_to_tensor=True, batch_size=batch_size)
-    reference_embeddings = embedding_model.encode(reference_outputs, convert_to_tensor=True, batch_size=batch_size)
-    similarities = [util.pytorch_cos_sim(c, r).item() for c, r in zip(candidate_embeddings, reference_embeddings)]
+def compute_cosine_similarity(
+    candidate_outputs, reference_outputs, embedding_model, batch_size=4
+):
+    candidate_embeddings = embedding_model.encode(
+        candidate_outputs, convert_to_tensor=True, batch_size=batch_size
+    )
+    reference_embeddings = embedding_model.encode(
+        reference_outputs, convert_to_tensor=True, batch_size=batch_size
+    )
+    similarities = [
+        util.pytorch_cos_sim(c, r).item()
+        for c, r in zip(candidate_embeddings, reference_embeddings)
+    ]
     return similarities
 
 
 def compute_bleu(candidate_outputs, reference_outputs):
-    return [sentence_bleu([ref.split()], cand.split()) for cand, ref in zip(candidate_outputs, reference_outputs)]
+    return [
+        sentence_bleu([ref.split()], cand.split())
+        for cand, ref in zip(candidate_outputs, reference_outputs)
+    ]
 
 
 def compute_rouge(candidate_outputs, reference_outputs):

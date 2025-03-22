@@ -1,7 +1,7 @@
 import torch
 from abc import ABC, abstractmethod
 
-from sentiment.constants import BaseSentiment
+from workmind.analyzers.constants import BaseSentiment
 
 
 class SentimentAnalyzerBase(ABC):
@@ -10,11 +10,13 @@ class SentimentAnalyzerBase(ABC):
     It defines the common interface: batchify, predict, infer_batch.
     """
 
-    def __init__(self,
-                 model_name: str,
-                 class_labels=None,
-                 batch_size=16,
-                 hypothesis_template=None):
+    def __init__(
+        self,
+        model_name: str,
+        class_labels=None,
+        batch_size=16,
+        hypothesis_template=None,
+    ):
         """
         :param model_name: Name of the model from Hugging Face.
         :param class_labels: List of class labels (e.g., ["negative", "positive"] or ["neg","neu","pos"]).
@@ -32,7 +34,7 @@ class SentimentAnalyzerBase(ABC):
     def batchify(self, data):
         """Split data into chunks of size batch_size."""
         for i in range(0, len(data), self.batch_size):
-            yield data[i:i + self.batch_size]
+            yield data[i : i + self.batch_size]
 
     def predict(self, texts):
         """

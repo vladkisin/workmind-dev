@@ -1,7 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from sentiment.analyzers.base import SentimentAnalyzerBase
-from sentiment.constants import BaseSentiment
+from workmind.analyzers.sentiment.base import SentimentAnalyzerBase
+from workmind.analyzers.constants import BaseSentiment
 
 
 class NLISentimentAnalyzer(SentimentAnalyzerBase):
@@ -10,16 +10,22 @@ class NLISentimentAnalyzer(SentimentAnalyzerBase):
     E.g., "roberta-large-mnli", "microsoft/deberta-v3-base-mnli", etc.
     """
 
-    def __init__(self, model_name, class_labels=None, batch_size=16, hypothesis_template=None):
+    def __init__(
+        self, model_name, class_labels=None, batch_size=16, hypothesis_template=None
+    ):
         super().__init__(model_name, class_labels, batch_size, hypothesis_template)
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name).to(self.device)
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name
+        ).to(self.device)
 
         if self.class_labels is None:
-            self.class_labels = [BaseSentiment.NEGATIVE,
-                                 BaseSentiment.NEUTRAL,
-                                 BaseSentiment.POSITIVE]
+            self.class_labels = [
+                BaseSentiment.NEGATIVE,
+                BaseSentiment.NEUTRAL,
+                BaseSentiment.POSITIVE,
+            ]
         self.entailment_index = self._get_entailment_index()
 
     def _get_entailment_index(self):
@@ -42,7 +48,9 @@ class NLISentimentAnalyzer(SentimentAnalyzerBase):
         """
         predictions = []
         for text in batch:
-            hypotheses = [self.hypothesis_template.format(label) for label in self.class_labels]
+            hypotheses = [
+                self.hypothesis_template.format(label) for label in self.class_labels
+            ]
 
             inputs = self.tokenizer(
                 [text] * len(hypotheses),
@@ -50,7 +58,7 @@ class NLISentimentAnalyzer(SentimentAnalyzerBase):
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
-                max_length=512
+                max_length=512,
             )
             inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
@@ -64,9 +72,11 @@ class NLISentimentAnalyzer(SentimentAnalyzerBase):
             sentiment_scores = dict(zip(self.class_labels, entailment_scores.tolist()))
             predicted_label = max(sentiment_scores, key=sentiment_scores.get)
 
-            predictions.append({
-                "text": text,
-                "predicted_sentiment": predicted_label,
-                "sentiment_scores": sentiment_scores
-            })
+            predictions.append(
+                {
+                    "text": text,
+                    "predicted_sentiment": predicted_label,
+                    "sentiment_scores": sentiment_scores,
+                }
+            )
         return predictions

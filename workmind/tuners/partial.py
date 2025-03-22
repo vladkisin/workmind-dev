@@ -6,25 +6,25 @@ from transformers import (
     TrainingArguments,
 )
 
-from tuners.base import AbstractFineTuner
-from tuners.utils import default_compute_metrics
+from workmind.tuners.base import AbstractFineTuner
+from workmind.tuners.utils import default_compute_metrics
 
 
 class PartiallyUnfrozenClsFineTuner(AbstractFineTuner):
     def __init__(
-            self,
-            model_name_or_path: str,
-            train_dataset,
-            eval_dataset,
-            tokenizer,
-            layers_to_unfreeze=("layer.21", "layer.22", "layer.23", "classifier"),
-            compute_metrics=default_compute_metrics,
-            output_dir: str = "./results",
-            learning_rate: float = 1e-5,
-            num_train_epochs: int = 15,
-            num_labels=3,
-            train_batch_size=16,
-            val_batch_size=16,
+        self,
+        model_name_or_path: str,
+        train_dataset,
+        eval_dataset,
+        tokenizer,
+        layers_to_unfreeze=("layer.21", "layer.22", "layer.23", "classifier"),
+        compute_metrics=default_compute_metrics,
+        output_dir: str = "./results",
+        learning_rate: float = 1e-5,
+        num_train_epochs: int = 15,
+        num_labels=3,
+        train_batch_size=16,
+        val_batch_size=16,
     ):
         self.model_name_or_path = model_name_or_path
         self.train_dataset = train_dataset
@@ -43,8 +43,12 @@ class PartiallyUnfrozenClsFineTuner(AbstractFineTuner):
         self.trainer = None
 
     def prepare_model(self) -> None:
-        config = AutoConfig.from_pretrained(self.model_name_or_path, num_labels=self.num_labels)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name_or_path, config=config)
+        config = AutoConfig.from_pretrained(
+            self.model_name_or_path, num_labels=self.num_labels
+        )
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name_or_path, config=config
+        )
 
         for name, param in self.model.named_parameters():
             if any(layer_id in name for layer_id in self.layers_to_unfreeze):
