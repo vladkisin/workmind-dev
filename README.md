@@ -114,8 +114,10 @@ for intervention in interventions:
 
 - `microsoft/Phi-3-mini-4k-instruct`
 - `microsoft/Phi-3.5-mini-instruct`
-- `tiiuae/Falcon3-7B-Instruct`
-- `Qwen/Qwen2.5-7B-Instruct`
+- `tiiuae/Falcon3-7B-Instruct` (and all the models of this family up to 7B)
+- `Qwen/Qwen2.5-7B-Instruct` (and all the models of this family up to 14B)
+- `ibm-granite/granite-3.2-2b-instruct`
+- `LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct`
 - Any compatible causal language model on Hugging Face supporting chat/instruct prompts (system and user context).
 
 ---
